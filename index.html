@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>No PMO Tracker Advanced</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: Canvas;
+      color: CanvasText;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      margin: 20px auto;
+      max-width: 400px;
+    }
+    .day {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    .marked {
+      background-color: #00cc88;
+      color: white;
+    }
+    .quote {
+      margin: 20px 0;
+      font-style: italic;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .success { background-color: #00cc88; color: white; }
+    .reset { background-color: #cc0000; color: white; }
+  </style>
+</head>
+<body>
+
+  <h1>Pelacak No PMO 🔥</h1>
+  <p>Hari ini: <strong id="today"></strong></p>
+  <button class="success" onclick="markToday()">Tandai Hari Ini ✅</button>
+  <button class="reset" onclick="resetProgress()">Reset ❌</button>
+
+  <div class="quote" id="quote"></div>
+  <button onclick="playMotivation()">Putar Suara Motivasi 🔊</button>
+
+  <h2>Kalender Bulan Ini</h2>
+  <div class="calendar" id="calendar"></div>
+
+  <script>
+    const quotes = [
+      "Kamu lebih kuat dari godaan itu.",
+      "Fokus pada tujuan jangka panjangmu.",
+      "Setiap hari kamu menang, kamu semakin kuat.",
+      "Disiplin hari ini adalah kebebasan besok.",
+      "Kamu sedang membangun kehidupan nyata, bukan hidup semu."
+    ];
+
+    function getTodayStr() {
+      const today = new Date();
+      return today.toISOString().split('T')[0];
+    }
+
+    function markToday() {
+      const today = getTodayStr();
+      let data = JSON.parse(localStorage.getItem('nopmo_days') || '[]');
+      if (!data.includes(today)) {
+        data.push(today);
+        localStorage.setItem('nopmo_days', JSON.stringify(data));
+        buildCalendar();
+      }
+    }
+
+    function resetProgress() {
+      if (confirm("Yakin ingin reset semua data?")) {
+        localStorage.removeItem('nopmo_days');
+        buildCalendar();
+      }
+    }
+
+    function buildCalendar() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const firstDay = new Date(year, month, 1).getDay();
+      const lastDate = new Date(year, month + 1, 0).getDate();
+      const container = document.getElementById('calendar');
+      const stored = JSON.parse(localStorage.getItem('nopmo_days') || '[]');
+
+      container.innerHTML = '';
+      for (let i = 0; i < firstDay; i++) {
+        container.innerHTML += '<div></div>';
+      }
+      for (let d = 1; d <= lastDate; d++) {
+        const dateStr = new Date(year, month, d).toISOString().split('T')[0];
+        const div = document.createElement('div');
+        div.className = 'day';
+        if (stored.includes(dateStr)) div.classList.add('marked');
+        div.textContent = d;
+        container.appendChild(div);
+      }
+    }
+
+    function randomQuote() {
+      const q = quotes[Math.floor(Math.random() * quotes.length)];
+      document.getElementById('quote').textContent = '"' + q + '"';
+    }
+
+    function playMotivation() {
+      const q = document.getElementById('quote').textContent;
+      const utterance = new SpeechSynthesisUtterance(q);
+      utterance.lang = 'id-ID';
+
+      // Pilih suara cewek (female)
+      const voices = speechSynthesis.getVoices();
+      const femaleVoice = voices.find(v => /female|wanita|Google Bahasa Indonesia/i.test(v.name));
+      if (femaleVoice) utterance.voice = femaleVoice;
+
+      speechSynthesis.speak(utterance);
+    }
+
+    function scheduleNotification() {
+      if ("Notification" in window && Notification.permission === "granted") {
+        const now = new Date();
+        const target = new Date();
+        target.setHours(20, 0, 0, 0); // Jam 20:00
+        if (target < now) target.setDate(target.getDate() + 1);
+        const timeout = target - now;
+        setTimeout(() => {
+          new Notification("Ingat! Jangan PMO hari ini! Tetap kuat!");
+          scheduleNotification();
+        }, timeout);
+      }
+    }
+
+    function requestNotificationPermission() {
+      if ("Notification" in window && Notification.permission !== "granted") {
+        Notification.requestPermission().then(perm => {
+          if (perm === "granted") scheduleNotification();
+        });
+      } else {
+        scheduleNotification();
+      }
+    }
+
+    // Inisialisasi
+    document.getElementById('today').textContent = getTodayStr();
+    randomQuote();
+    buildCalendar();
+    requestNotificationPermission();
+
+    // Update suara voices ketika tersedia (karena async)
+    speechSynthesis.onvoiceschanged = () => {};
+  </script>
+
+  <script>
+    // Register service worker for PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log('Service Worker registered'))
+        .catch(err => console.log('Service Worker registration failed:', err));
+    }
+  </script>
+
+</body>
+  </html>
+  
